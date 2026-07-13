@@ -1,0 +1,16 @@
+# Compiled Java output
+*.class
+ConsoleBankApp/bin/
+ConsoleBankApp/out/
+ConsoleBankApp/target/
+
+# Eclipse-generated project settings
+ConsoleBankApp/.classpath
+ConsoleBankApp/.project
+ConsoleBankApp/.settings/
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
