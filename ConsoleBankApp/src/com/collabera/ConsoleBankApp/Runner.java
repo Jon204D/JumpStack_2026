@@ -99,14 +99,29 @@ public class Runner {
 
 	public static void adminDashboard(String uname) {
 		printMessage("Welcome to the admin dashboard, " + uname);
-		//to-do: implement admin dashboard functionality using Switch-case
-		//View client account details, withdraw, transfer, deposit
+		printMessage("What would you like to do? \n1. View client account details \n2. Withdraw \n3. Transfer \n4. Deposit \n");
+		String choice = scr.nextLine().trim();
+
+		switch (choice) {
+			case "1":
+				displayAccountDetails(uname);
+				break;
+			case "2":
+				withdrawFromAccount(uname);
+				break;
+			case "3":
+				transferFromAccount(uname);
+				break;
+			case "4":
+				depositToAccount(uname);
+				break;
+			default:
+				printMessage("Invalid menu option.");
+		}
 	}
 
 	public static void customerDashboard(String uname) {
 		printMessage("Welcome to the customer dashboard, " + uname);
-
-		
 		printMessage("What would you like to do? \n1. View balance \n2. Withdraw \n3. Transfer \n4. Deposit \n");
 		String choice = scr.nextLine().trim();
 
