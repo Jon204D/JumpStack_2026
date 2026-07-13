@@ -6,21 +6,27 @@ public class Runner {
 	static final List<User> users = new ArrayList<>();
 
 	static {
-		User admin = new Admin();
+		Admin admin = new Admin();
 		admin.setUsername("admin");
 		admin.setPassword("admin123");
 
-		User customer1 = new Customer();
+		Customer customer1 = new Customer();
 		customer1.setUsername("customer1");
 		customer1.setPassword("customer123");
+		admin.openCheckingAccount(customer1, 1, "CHK2345678", 1000.0);
+		admin.openSavingsAccount(customer1, 1, "SAV002345678", 500.0);
 
-		User customer2 = new Customer();
+		Customer customer2 = new Customer();
 		customer2.setUsername("customer2");
 		customer2.setPassword("customer123");
+		admin.openCheckingAccount(customer2, 2, "CHK003456789", 2000.0);
+		admin.openSavingsAccount(customer2, 2, "SAV003456789", 1000.0);
 
-		User customer3 = new Customer();
-		customer3.setUsername("customer");
+		Customer customer3 = new Customer();
+		customer3.setUsername("customer3");
 		customer3.setPassword("customer123");
+		admin.openCheckingAccount(customer3, 3, "CHK004567891", 3000.0);
+		admin.openSavingsAccount(customer3, 3, "SAV004567891", 1500.0);
 
 		users.add(admin);
 		users.add(customer1);
@@ -99,8 +105,226 @@ public class Runner {
 
 	public static void customerDashboard(String uname) {
 		printMessage("Welcome to the customer dashboard, " + uname);
-		//to-do: implement customer dashboard functionality using Switch-case
-		//View own account details, withdraw, transfer, deposit
+
+		
+		printMessage("What would you like to do? \n1. View balance \n2. Withdraw \n3. Transfer \n4. Deposit \n");
+		String choice = scr.nextLine().trim();
+
+		switch (choice) {
+			case "1":
+				displayAccountDetails(uname);
+				break;
+			case "2":
+				withdrawFromAccount(uname);
+				break;
+			case "3":
+				transferFromAccount(uname);
+				break;
+			case "4":
+				depositToAccount(uname);
+				break;
+			default:
+				printMessage("Invalid menu option.");
+		}
+	}
+
+	static Customer findCustomerByUsername(String uname) {
+		for (User user : users) {
+			if (user instanceof Customer customer
+					&& customer.getUsername().equals(uname)) {
+				return customer;
+			}
+		}
+
+		return null;
+	}
+
+	static void displayAccountDetails(String uname) {
+		Customer customer = findCustomerByUsername(uname);
+
+		if (customer == null) {
+			printMessage("Customer was not found.");
+			return;
+		}
+
+		if (customer.getAccounts().isEmpty()) {
+			printMessage("You do not have any accounts.");
+			return;
+		}
+
+		for (Account account : customer.getAccounts()) {
+			String accountType = "Unknown";
+			double interestRate = 0.0;
+
+			if (account instanceof SavingsAccount savings) {
+				accountType = "Savings";
+				interestRate = savings.getSavingsInterestRate();
+			} else if (account instanceof CheckingAccount checking) {
+				accountType = "Checking";
+				interestRate = checking.getCheckingInterestRate();
+			}
+
+			String details = String.format(
+					"%s Account:%n"
+							+ "\tAccount Number: %s%n"
+							+ "\tBalance: $%.2f%n"
+							+ "\tInterest Rate: %.2f%%",
+					accountType,
+					account.getAccountNumber(),
+					account.getBalance(),
+					interestRate * 100);
+
+			printMessage(details);
+		}
+	}
+
+	static void withdrawFromAccount(String uname) {
+		Customer customer = findCustomerByUsername(uname);
+		Account account = selectOwnedAccount(customer, "withdraw from");
+		if (account == null) {
+			return;
+		}
+
+		Double amount = readPositiveAmount("Enter the amount to withdraw:");
+		if (amount == null) {
+			return;
+		}
+
+		if (amount > account.getBalance()) {
+			printMessage("Insufficient balance.");
+			return;
+		}
+
+		account.withdraw(amount);
+		printMessage(String.format(
+				"Withdrawal successful. New balance: $%.2f",
+				account.getBalance()));
+	}
+
+	static void depositToAccount(String uname) {
+		Customer customer = findCustomerByUsername(uname);
+		Account account = selectOwnedAccount(customer, "deposit into");
+		if (account == null) {
+			return;
+		}
+
+		Double amount = readPositiveAmount("Enter the amount to deposit:");
+		if (amount == null) {
+			return;
+		}
+
+		account.deposit(amount);
+		printMessage(String.format(
+				"Deposit successful. New balance: $%.2f",
+				account.getBalance()));
+	}
+
+	static void transferFromAccount(String uname) {
+		Customer customer = findCustomerByUsername(uname);
+		Account sourceAccount = selectOwnedAccount(customer, "transfer from");
+		if (sourceAccount == null) {
+			return;
+		}
+
+		printMessage("Enter the destination account number:");
+		String destinationAccountNumber = scr.nextLine().trim();
+		Account destinationAccount = findAccountByNumber(destinationAccountNumber);
+
+		if (destinationAccount == null) {
+			printMessage("Destination account was not found.");
+			return;
+		}
+
+		if (destinationAccount == sourceAccount) {
+			printMessage("Source and destination accounts must be different.");
+			return;
+		}
+
+		Double amount = readPositiveAmount("Enter the amount to transfer:");
+		if (amount == null) {
+			return;
+		}
+
+		if (amount > sourceAccount.getBalance()) {
+			printMessage("Insufficient balance.");
+			return;
+		}
+
+		sourceAccount.transfer(amount, destinationAccount);
+		printMessage(String.format(
+				"Transfer successful. New balance: $%.2f",
+				sourceAccount.getBalance()));
+	}
+
+	static Account selectOwnedAccount(Customer customer, String action) {
+		if (customer == null) {
+			printMessage("Customer was not found.");
+			return null;
+		}
+
+		if (customer.getAccounts().isEmpty()) {
+			printMessage("You do not have any accounts.");
+			return null;
+		}
+
+		printMessage("Available accounts:");
+		for (Account account : customer.getAccounts()) {
+			printMessage(String.format(
+					"\t%s - Balance: $%.2f",
+					account.getAccountNumber(),
+					account.getBalance()));
+		}
+
+		printMessage("Enter the account number to " + action + ":");
+		String accountNumber = scr.nextLine().trim();
+		Account account = findAccountByNumber(customer, accountNumber);
+
+		if (account == null) {
+			printMessage("That account was not found or does not belong to you.");
+		}
+
+		return account;
+	}
+
+	static Account findAccountByNumber(Customer customer, String accountNumber) {
+		for (Account account : customer.getAccounts()) {
+			if (account.getAccountNumber().equalsIgnoreCase(accountNumber)) {
+				return account;
+			}
+		}
+
+		return null;
+	}
+
+	static Account findAccountByNumber(String accountNumber) {
+		for (User user : users) {
+			if (user instanceof Customer customer) {
+				Account account = findAccountByNumber(customer, accountNumber);
+				if (account != null) {
+					return account;
+				}
+			}
+		}
+
+		return null;
+	}
+
+	static Double readPositiveAmount(String prompt) {
+		printMessage(prompt);
+		String input = scr.nextLine().trim();
+
+		try {
+			double amount = Double.parseDouble(input);
+			if (!Double.isFinite(amount) || amount <= 0) {
+				printMessage("Amount must be a positive number.");
+				return null;
+			}
+
+			return amount;
+		} catch (NumberFormatException exception) {
+			printMessage("Invalid amount.");
+			return null;
+		}
 	}
 }
 
@@ -167,23 +391,51 @@ class Admin extends User {
 	String getUserType() {
 		return "admin";
 	}
+
+	public SavingsAccount openSavingsAccount(Customer customer, int id, String accountNumber, double startingBalance) {
+		SavingsAccount newAccount = new SavingsAccount(customer, id, accountNumber, startingBalance);
+		customer.addAccount(newAccount);
+		return newAccount;
+	}
+
+	public CheckingAccount openCheckingAccount(Customer customer, int id, String accountNumber, double startingBalance) {
+		CheckingAccount newAccount = new CheckingAccount(customer, id, accountNumber, startingBalance);
+		customer.addAccount(newAccount);
+		return newAccount;
+	}
 }
 
 class Customer extends User {
 	String getUserType() {
 		return "customer";
 	}
+	
+	private final List<Account> accounts = new ArrayList<>();
+
+	public List<Account> getAccounts() {
+		return accounts;
+	}
+
+	public void addAccount(Account account) {
+		accounts.add(account);
+	}
 }
 
-abstract class Account {
+abstract class Account implements AccountOperations {
+	private Customer customer;
 	private int id;
 	private String accountNumber;
 	private double balance;
 
-	public Account(int id, String accountNumber, double balance) {
+	public Account(Customer customer, int id, String accountNumber, double balance) {
+		this.customer = customer;
 		this.id = id;
 		this.accountNumber = accountNumber;
 		this.balance = balance;
+	}
+
+	public Customer getCustomer() {
+		return customer;
 	}
 
 	public int getId() {
@@ -205,22 +457,22 @@ abstract class Account {
 	public void setBalance(double balance) {
 		this.balance = balance;
 	}
-}
-
-class SavingsAccount extends Account implements AccountOperations {
-
-	public SavingsAccount(int id, String accountNumber, double balance) {
-		super(id, accountNumber, balance);
-	}
 
 	@Override
 	public void deposit(double amount) {
+		if (!Double.isFinite(amount) || amount <= 0) {
+			System.out.println("Amount must be a positive number.");
+			return;
+		}
+
 		setBalance(getBalance() + amount);
 	}
 
 	@Override
 	public void withdraw(double amount) {
-		if (amount <= getBalance()) {
+		if (!Double.isFinite(amount) || amount <= 0) {
+			System.out.println("Amount must be a positive number.");
+		} else if (amount <= getBalance()) {
 			setBalance(getBalance() - amount);
 		} else {
 			System.out.println("Insufficient balance");
@@ -229,43 +481,48 @@ class SavingsAccount extends Account implements AccountOperations {
 
 	@Override
 	public void transfer(double amount, Account toAccount) {
-		if (amount <= getBalance()) {
+		if (!Double.isFinite(amount) || amount <= 0) {
+			System.out.println("Amount must be a positive number.");
+		} else if (toAccount == null || toAccount == this) {
+			System.out.println("A different destination account is required.");
+		} else if (amount <= getBalance()) {
 			setBalance(getBalance() - amount);
 			toAccount.setBalance(toAccount.getBalance() + amount);
 		} else {
 			System.out.println("Insufficient balance");
 		}
+	}
+}
+
+class SavingsAccount extends Account implements AccountOperations {
+	private double savingsInterestRate = 0.015;
+
+	public SavingsAccount(Customer customer, int id, String accountNumber, double balance) {
+		super(customer, id, accountNumber, balance);
+	}
+
+	public double getSavingsInterestRate() {
+		return savingsInterestRate;
+	}
+
+	public void setSavingsInterestRate(double savingsInterestRate) {
+		this.savingsInterestRate = savingsInterestRate;
 	}
 }
 
 class CheckingAccount extends Account implements AccountOperations {
+	private double checkingInterestRate = 0.01;
 
-	public CheckingAccount(int id, String accountNumber, double balance) {
-		super(id, accountNumber, balance);
+	public CheckingAccount(Customer customer, int id, String accountNumber, double balance) {
+		super(customer, id, accountNumber, balance);
 	}
 
-	@Override
-	public void deposit(double amount) {
-		setBalance(getBalance() + amount);
+	public double getCheckingInterestRate() {
+		return checkingInterestRate;
 	}
 
-	@Override
-	public void withdraw(double amount) {
-		if (amount <= getBalance()) {
-			setBalance(getBalance() - amount);
-		} else {
-			System.out.println("Insufficient balance");
-		}
-	}
-
-	@Override
-	public void transfer(double amount, Account toAccount) {
-		if (amount <= getBalance()) {
-			setBalance(getBalance() - amount);
-			toAccount.setBalance(toAccount.getBalance() + amount);
-		} else {
-			System.out.println("Insufficient balance");
-		}
+	public void setCheckingInterestRate(double checkingInterestRate) {
+		this.checkingInterestRate = checkingInterestRate;
 	}
 }
 
