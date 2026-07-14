@@ -36,7 +36,7 @@ public class CustomerController {
     public ResponseEntity<CustomerResponse> createCustomer(
             @Valid @RequestBody CreateCustomerRequest request) {
         CustomerResponse response = CustomerResponse.from(
-                customerService.createCustomer(request.username()));
+                customerService.createCustomer(request.username(), request.password()));
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
