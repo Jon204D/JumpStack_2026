@@ -61,7 +61,11 @@ public class AccountService {
     }
 
     public List<Account> getAccountsForCustomer(String customerId) {
-        return accountRepository.findByCustomerId(requireText(customerId, "Customer id"));
+        String cleanCustomerId = requireText(customerId, "Customer id");
+        if (!customerRepository.existsById(cleanCustomerId)) {
+            throw new ResourceNotFoundException("Customer was not found");
+        }
+        return accountRepository.findByCustomerId(cleanCustomerId);
     }
 
     public Account deposit(String accountNumber, BigDecimal amount) {

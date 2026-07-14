@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -104,6 +105,17 @@ class AccountServiceTests {
         assertThrows(IllegalArgumentException.class,
                 () -> accountService.deposit("CHK001", new BigDecimal("0.001")));
         verify(accountRepository, never()).findByAccountNumberIgnoreCase(any());
+    }
+
+    @Test
+    void listsAccountsForExistingCustomer() {
+        when(customerRepository.existsById("customer-1")).thenReturn(true);
+        when(accountRepository.findByCustomerId("customer-1"))
+                .thenReturn(List.of(checkingAccount("CHK001", "100.00")));
+
+        List<Account> accounts = accountService.getAccountsForCustomer("customer-1");
+
+        assertEquals(1, accounts.size());
     }
 
     private Account checkingAccount(String accountNumber, String balance) {
