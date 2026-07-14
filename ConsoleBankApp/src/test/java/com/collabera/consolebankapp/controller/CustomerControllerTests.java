@@ -15,6 +15,7 @@ import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
 import com.collabera.consolebankapp.exception.DuplicateResourceException;
 import com.collabera.consolebankapp.model.Customer;
+import com.collabera.consolebankapp.security.BankAuthorizationService;
 import com.collabera.consolebankapp.service.AccountService;
 import com.collabera.consolebankapp.service.CustomerService;
 
@@ -27,7 +28,10 @@ class CustomerControllerTests {
     void setUp() {
         customerService = org.mockito.Mockito.mock(CustomerService.class);
         AccountService accountService = org.mockito.Mockito.mock(AccountService.class);
-        CustomerController controller = new CustomerController(customerService, accountService);
+        BankAuthorizationService authorizationService =
+                org.mockito.Mockito.mock(BankAuthorizationService.class);
+        CustomerController controller = new CustomerController(
+                customerService, accountService, authorizationService);
         LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
         validator.afterPropertiesSet();
         mockMvc = MockMvcBuilders.standaloneSetup(controller)

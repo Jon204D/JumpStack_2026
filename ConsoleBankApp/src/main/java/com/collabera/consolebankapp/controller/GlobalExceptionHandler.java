@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.collabera.consolebankapp.dto.ApiError;
 import com.collabera.consolebankapp.exception.DuplicateResourceException;
+import com.collabera.consolebankapp.exception.ForbiddenOperationException;
 import com.collabera.consolebankapp.exception.InsufficientFundsException;
 import com.collabera.consolebankapp.exception.ResourceNotFoundException;
 
@@ -22,6 +23,12 @@ import jakarta.servlet.http.HttpServletRequest;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(ForbiddenOperationException.class)
+    public ResponseEntity<ApiError> handleForbidden(
+            ForbiddenOperationException exception, HttpServletRequest request) {
+        return response(HttpStatus.FORBIDDEN, exception.getMessage(), request, Map.of());
+    }
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ApiError> handleNotFound(

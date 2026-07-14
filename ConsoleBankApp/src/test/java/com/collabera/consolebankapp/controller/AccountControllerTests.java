@@ -1,5 +1,8 @@
 package com.collabera.consolebankapp.controller;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -16,21 +19,26 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
 import com.collabera.consolebankapp.exception.InsufficientFundsException;
+import com.collabera.consolebankapp.exception.ForbiddenOperationException;
 import com.collabera.consolebankapp.model.Account;
 import com.collabera.consolebankapp.model.AccountType;
 import com.collabera.consolebankapp.service.AccountService;
+import com.collabera.consolebankapp.security.BankAuthorizationService;
 
 class AccountControllerTests {
 
     private AccountService accountService;
+    private BankAuthorizationService authorizationService;
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
         accountService = org.mockito.Mockito.mock(AccountService.class);
+        authorizationService = org.mockito.Mockito.mock(BankAuthorizationService.class);
         LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
         validator.afterPropertiesSet();
-        mockMvc = MockMvcBuilders.standaloneSetup(new AccountController(accountService))
+        mockMvc = MockMvcBuilders.standaloneSetup(
+                        new AccountController(accountService, authorizationService))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .setValidator(validator)
                 .build();
@@ -85,6 +93,22 @@ class AccountControllerTests {
                         .content("{\"amount\":200.00}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("Insufficient balance"));
+    }
+
+    @Test
+    void forbidsTransactionsAgainstAnotherCustomersAccount() throws Exception {
+        doThrow(new ForbiddenOperationException(
+                "You cannot access an account that you do not own"))
+                .when(authorizationService)
+                .requireAccountAccess(any(), eq("CHK002"));
+
+        mockMvc.perform(post("/api/accounts/CHK002/withdrawals")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"amount\":25.00}"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.message")
+                        .value("You cannot access an account that you do not own"));
     }
 
     private Account checkingAccount(String balance) {
