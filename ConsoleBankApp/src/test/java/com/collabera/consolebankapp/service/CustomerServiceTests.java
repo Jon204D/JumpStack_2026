@@ -8,6 +8,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.Optional;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -17,10 +19,12 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.collabera.consolebankapp.exception.DuplicateResourceException;
+import com.collabera.consolebankapp.exception.ResourceNotFoundException;
 import com.collabera.consolebankapp.model.Customer;
 import com.collabera.consolebankapp.model.Role;
 import com.collabera.consolebankapp.model.UserCredential;
 import com.collabera.consolebankapp.repository.CustomerRepository;
+import com.collabera.consolebankapp.repository.AccountRepository;
 import com.collabera.consolebankapp.repository.UserCredentialRepository;
 
 @ExtendWith(MockitoExtension.class)
@@ -32,6 +36,9 @@ class CustomerServiceTests {
     @Mock
     private UserCredentialRepository userCredentialRepository;
 
+    @Mock
+    private AccountRepository accountRepository;
+
     private CustomerService customerService;
     private PasswordEncoder passwordEncoder;
 
@@ -41,7 +48,8 @@ class CustomerServiceTests {
         customerService = new CustomerService(
                 customerRepository,
                 userCredentialRepository,
-                passwordEncoder);
+                passwordEncoder,
+                accountRepository);
     }
 
     @Test
@@ -92,5 +100,31 @@ class CustomerServiceTests {
             assertNotEquals("customer123", credential.getPasswordHash());
             return true;
         }));
+    }
+
+    @Test
+    void deletesCustomerAccountsAndCredentials() {
+        Customer customer = new Customer("customer1");
+        when(customerRepository.findById("customer-1"))
+                .thenReturn(Optional.of(customer));
+
+        customerService.deleteCustomer("customer-1");
+
+        verify(accountRepository).deleteByCustomerId("customer-1");
+        verify(userCredentialRepository).deleteByCustomerId("customer-1");
+        verify(customerRepository).delete(customer);
+    }
+
+    @Test
+    void doesNotDeleteAnythingWhenCustomerIsMissing() {
+        when(customerRepository.findById("missing"))
+                .thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class,
+                () -> customerService.deleteCustomer("missing"));
+
+        verify(accountRepository, never()).deleteByCustomerId(any());
+        verify(userCredentialRepository, never()).deleteByCustomerId(any());
+        verify(customerRepository, never()).delete(any(Customer.class));
     }
 }

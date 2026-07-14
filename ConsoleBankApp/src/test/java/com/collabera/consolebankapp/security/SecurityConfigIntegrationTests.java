@@ -1,6 +1,7 @@
 package com.collabera.consolebankapp.security;
 
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -17,7 +18,9 @@ import org.springframework.web.context.WebApplicationContext;
         "spring.mongodb.uri=mongodb://localhost:27017/console_bank_test",
         "spring.mongodb.database=console_bank_test",
         "spring.data.mongodb.auto-index-creation=false",
-        "app.admin.password="
+        "app.admin.password=",
+        "debug=false",
+        "logging.level.org.mongodb.driver=OFF"
 })
 class SecurityConfigIntegrationTests {
 
@@ -43,6 +46,20 @@ class SecurityConfigIntegrationTests {
     @WithMockUser(username = "customer1", roles = "CUSTOMER")
     void forbidsCustomerFromAdminOnlyEndpoint() throws Exception {
         mockMvc.perform(get("/api/customers"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(username = "customer1", roles = "CUSTOMER")
+    void forbidsCustomerFromListingEveryAccount() throws Exception {
+        mockMvc.perform(get("/api/accounts"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(username = "customer1", roles = "CUSTOMER")
+    void forbidsCustomerFromDeletingResources() throws Exception {
+        mockMvc.perform(delete("/api/accounts/CHK001"))
                 .andExpect(status().isForbidden());
     }
 }

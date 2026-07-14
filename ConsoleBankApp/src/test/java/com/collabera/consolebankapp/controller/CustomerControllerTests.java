@@ -2,6 +2,8 @@ package com.collabera.consolebankapp.controller;
 
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.doThrow;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -14,6 +16,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
 import com.collabera.consolebankapp.exception.DuplicateResourceException;
+import com.collabera.consolebankapp.exception.ResourceNotFoundException;
 import com.collabera.consolebankapp.model.Customer;
 import com.collabera.consolebankapp.security.BankAuthorizationService;
 import com.collabera.consolebankapp.service.AccountService;
@@ -89,5 +92,23 @@ class CustomerControllerTests {
                         .content("{\"username\":\"customer1\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.fieldErrors.password").value("Password is required"));
+    }
+
+    @Test
+    void deletesCustomer() throws Exception {
+        mockMvc.perform(delete("/api/customers/customer-1"))
+                .andExpect(status().isNoContent());
+
+        verify(customerService).deleteCustomer("customer-1");
+    }
+
+    @Test
+    void reportsMissingCustomerDuringDelete() throws Exception {
+        doThrow(new ResourceNotFoundException("Customer was not found"))
+                .when(customerService).deleteCustomer("missing");
+
+        mockMvc.perform(delete("/api/customers/missing"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Customer was not found"));
     }
 }

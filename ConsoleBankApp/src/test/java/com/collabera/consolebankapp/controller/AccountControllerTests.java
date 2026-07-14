@@ -5,11 +5,15 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -20,8 +24,11 @@ import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
 import com.collabera.consolebankapp.exception.InsufficientFundsException;
 import com.collabera.consolebankapp.exception.ForbiddenOperationException;
+import com.collabera.consolebankapp.exception.ResourceNotFoundException;
 import com.collabera.consolebankapp.model.Account;
 import com.collabera.consolebankapp.model.AccountType;
+import com.collabera.consolebankapp.model.BankTransaction;
+import com.collabera.consolebankapp.model.TransactionType;
 import com.collabera.consolebankapp.service.AccountService;
 import com.collabera.consolebankapp.security.BankAuthorizationService;
 
@@ -109,6 +116,52 @@ class AccountControllerTests {
                 .andExpect(jsonPath("$.status").value(403))
                 .andExpect(jsonPath("$.message")
                         .value("You cannot access an account that you do not own"));
+    }
+
+    @Test
+    void listsAllAccounts() throws Exception {
+        when(accountService.getAllAccounts())
+                .thenReturn(List.of(checkingAccount("100.00")));
+
+        mockMvc.perform(get("/api/accounts"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].accountNumber").value("CHK001"));
+    }
+
+    @Test
+    void returnsTransactionHistory() throws Exception {
+        BankTransaction transaction = new BankTransaction(
+                TransactionType.DEPOSIT,
+                null,
+                "CHK001",
+                new BigDecimal("25.00"),
+                Instant.parse("2026-07-14T12:00:00Z"));
+        when(accountService.getTransactionHistory("CHK001"))
+                .thenReturn(List.of(transaction));
+
+        mockMvc.perform(get("/api/accounts/CHK001/transactions"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].type").value("DEPOSIT"))
+                .andExpect(jsonPath("$[0].destinationAccountNumber").value("CHK001"))
+                .andExpect(jsonPath("$[0].amount").value(25.00));
+    }
+
+    @Test
+    void deletesAccount() throws Exception {
+        mockMvc.perform(delete("/api/accounts/CHK001"))
+                .andExpect(status().isNoContent());
+
+        verify(accountService).deleteAccount("CHK001");
+    }
+
+    @Test
+    void reportsMissingAccountDuringDelete() throws Exception {
+        doThrow(new ResourceNotFoundException("Account was not found"))
+                .when(accountService).deleteAccount("MISSING");
+
+        mockMvc.perform(delete("/api/accounts/MISSING"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Account was not found"));
     }
 
     private Account checkingAccount(String balance) {
