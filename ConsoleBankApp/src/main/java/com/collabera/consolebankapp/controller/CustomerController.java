@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -82,5 +83,11 @@ public class CustomerController {
         return accountService.getAccountsForCustomer(customerId).stream()
                 .map(AccountResponse::from)
                 .toList();
+    }
+
+    @DeleteMapping("/{customerId}")
+    public ResponseEntity<Void> deleteCustomer(@PathVariable String customerId) {
+        customerService.deleteCustomer(customerId);
+        return ResponseEntity.noContent().build();
     }
 }

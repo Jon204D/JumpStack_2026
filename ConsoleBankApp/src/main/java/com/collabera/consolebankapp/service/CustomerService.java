@@ -12,6 +12,7 @@ import com.collabera.consolebankapp.model.Customer;
 import com.collabera.consolebankapp.model.Role;
 import com.collabera.consolebankapp.model.UserCredential;
 import com.collabera.consolebankapp.repository.CustomerRepository;
+import com.collabera.consolebankapp.repository.AccountRepository;
 import com.collabera.consolebankapp.repository.UserCredentialRepository;
 
 @Service
@@ -20,14 +21,17 @@ public class CustomerService {
     private final CustomerRepository customerRepository;
     private final UserCredentialRepository userCredentialRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AccountRepository accountRepository;
 
     public CustomerService(
             CustomerRepository customerRepository,
             UserCredentialRepository userCredentialRepository,
-            PasswordEncoder passwordEncoder) {
+            PasswordEncoder passwordEncoder,
+            AccountRepository accountRepository) {
         this.customerRepository = customerRepository;
         this.userCredentialRepository = userCredentialRepository;
         this.passwordEncoder = passwordEncoder;
+        this.accountRepository = accountRepository;
     }
 
     @Transactional
@@ -57,6 +61,16 @@ public class CustomerService {
 
     public List<Customer> getAllCustomers() {
         return customerRepository.findAll();
+    }
+
+    @Transactional
+    public void deleteCustomer(String customerId) {
+        String cleanCustomerId = requireText(customerId, "Customer id");
+        Customer customer = getCustomer(cleanCustomerId);
+
+        accountRepository.deleteByCustomerId(cleanCustomerId);
+        userCredentialRepository.deleteByCustomerId(cleanCustomerId);
+        customerRepository.delete(customer);
     }
 
     private String requireText(String value, String fieldName) {

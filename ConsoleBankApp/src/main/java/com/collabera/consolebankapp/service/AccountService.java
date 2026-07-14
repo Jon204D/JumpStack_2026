@@ -2,6 +2,7 @@ package com.collabera.consolebankapp.service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 
@@ -13,7 +14,10 @@ import com.collabera.consolebankapp.exception.InsufficientFundsException;
 import com.collabera.consolebankapp.exception.ResourceNotFoundException;
 import com.collabera.consolebankapp.model.Account;
 import com.collabera.consolebankapp.model.AccountType;
+import com.collabera.consolebankapp.model.BankTransaction;
+import com.collabera.consolebankapp.model.TransactionType;
 import com.collabera.consolebankapp.repository.AccountRepository;
+import com.collabera.consolebankapp.repository.BankTransactionRepository;
 import com.collabera.consolebankapp.repository.CustomerRepository;
 
 @Service
@@ -24,11 +28,14 @@ public class AccountService {
 
     private final AccountRepository accountRepository;
     private final CustomerRepository customerRepository;
+    private final BankTransactionRepository transactionRepository;
 
     public AccountService(AccountRepository accountRepository,
-            CustomerRepository customerRepository) {
+            CustomerRepository customerRepository,
+            BankTransactionRepository transactionRepository) {
         this.accountRepository = accountRepository;
         this.customerRepository = customerRepository;
+        this.transactionRepository = transactionRepository;
     }
 
     public Account createAccount(String customerId, String accountNumber,
@@ -60,6 +67,10 @@ public class AccountService {
         return findAccount(normalizeAccountNumber(accountNumber));
     }
 
+    public List<Account> getAllAccounts() {
+        return accountRepository.findAll();
+    }
+
     public List<Account> getAccountsForCustomer(String customerId) {
         String cleanCustomerId = requireText(customerId, "Customer id");
         if (!customerRepository.existsById(cleanCustomerId)) {
@@ -68,13 +79,22 @@ public class AccountService {
         return accountRepository.findByCustomerId(cleanCustomerId);
     }
 
+    @Transactional
     public Account deposit(String accountNumber, BigDecimal amount) {
         BigDecimal cleanAmount = requirePositiveMoney(amount, "Deposit amount");
         Account account = findAccount(normalizeAccountNumber(accountNumber));
         account.setBalance(account.getBalance().add(cleanAmount));
-        return accountRepository.save(account);
+        Account savedAccount = accountRepository.save(account);
+        transactionRepository.save(new BankTransaction(
+                TransactionType.DEPOSIT,
+                null,
+                account.getAccountNumber(),
+                cleanAmount,
+                Instant.now()));
+        return savedAccount;
     }
 
+    @Transactional
     public Account withdraw(String accountNumber, BigDecimal amount) {
         BigDecimal cleanAmount = requirePositiveMoney(amount, "Withdrawal amount");
         Account account = findAccount(normalizeAccountNumber(accountNumber));
@@ -84,7 +104,14 @@ public class AccountService {
         }
 
         account.setBalance(account.getBalance().subtract(cleanAmount));
-        return accountRepository.save(account);
+        Account savedAccount = accountRepository.save(account);
+        transactionRepository.save(new BankTransaction(
+                TransactionType.WITHDRAWAL,
+                account.getAccountNumber(),
+                null,
+                cleanAmount,
+                Instant.now()));
+        return savedAccount;
     }
 
     @Transactional
@@ -109,6 +136,27 @@ public class AccountService {
         destination.setBalance(destination.getBalance().add(cleanAmount));
         accountRepository.save(source);
         accountRepository.save(destination);
+        transactionRepository.save(new BankTransaction(
+                TransactionType.TRANSFER,
+                source.getAccountNumber(),
+                destination.getAccountNumber(),
+                cleanAmount,
+                Instant.now()));
+    }
+
+    public List<BankTransaction> getTransactionHistory(String accountNumber) {
+        String cleanAccountNumber = normalizeAccountNumber(accountNumber);
+        findAccount(cleanAccountNumber);
+        return transactionRepository
+                .findBySourceAccountNumberIgnoreCaseOrDestinationAccountNumberIgnoreCaseOrderByCreatedAtDesc(
+                        cleanAccountNumber,
+                        cleanAccountNumber);
+    }
+
+    @Transactional
+    public void deleteAccount(String accountNumber) {
+        Account account = findAccount(normalizeAccountNumber(accountNumber));
+        accountRepository.delete(account);
     }
 
     private Account findAccount(String accountNumber) {

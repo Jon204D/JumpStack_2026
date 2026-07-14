@@ -14,4 +14,6 @@ public interface AccountRepository extends MongoRepository<Account, String> {
     List<Account> findByCustomerId(String customerId);
 
     boolean existsByAccountNumberIgnoreCase(String accountNumber);
+
+    long deleteByCustomerId(String customerId);
 }

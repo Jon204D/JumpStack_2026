@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.collabera.consolebankapp.dto.AccountResponse;
 import com.collabera.consolebankapp.dto.AmountRequest;
 import com.collabera.consolebankapp.dto.TransferRequest;
+import com.collabera.consolebankapp.dto.TransactionResponse;
 import com.collabera.consolebankapp.service.AccountService;
 import com.collabera.consolebankapp.security.BankAuthorizationService;
 
@@ -37,6 +38,23 @@ public class AccountController {
             Authentication authentication) {
         authorizationService.requireAccountAccess(authentication, accountNumber);
         return AccountResponse.from(accountService.getAccount(accountNumber));
+    }
+
+    @GetMapping
+    public List<AccountResponse> getAllAccounts() {
+        return accountService.getAllAccounts().stream()
+                .map(AccountResponse::from)
+                .toList();
+    }
+
+    @GetMapping("/{accountNumber}/transactions")
+    public List<TransactionResponse> getTransactionHistory(
+            @PathVariable String accountNumber,
+            Authentication authentication) {
+        authorizationService.requireAccountAccess(authentication, accountNumber);
+        return accountService.getTransactionHistory(accountNumber).stream()
+                .map(TransactionResponse::from)
+                .toList();
     }
 
     @PostMapping("/{accountNumber}/deposits")
@@ -69,4 +87,13 @@ public class AccountController {
                 request.amount());
         return ResponseEntity.noContent().build();
     }
+
+    @DeleteMapping("/{accountNumber}")
+    public ResponseEntity<Void> deleteAccount(@PathVariable String accountNumber) {
+        accountService.deleteAccount(accountNumber);
+        return ResponseEntity.noContent().build();
+    }
 }
+import java.util.List;
+
+import org.springframework.web.bind.annotation.DeleteMapping;
