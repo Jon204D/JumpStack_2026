@@ -38,23 +38,27 @@ class CustomerControllerTests {
 
     @Test
     void createsCustomer() throws Exception {
-        when(customerService.createCustomer("customer1"))
+        when(customerService.createCustomer("customer1", "customer123"))
                 .thenReturn(new Customer("customer1"));
 
         mockMvc.perform(post("/api/customers")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"username\":\"customer1\"}"))
+                        .content("""
+                                {"username":"customer1","password":"customer123"}
+                                """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.username").value("customer1"));
 
-        verify(customerService).createCustomer("customer1");
+        verify(customerService).createCustomer("customer1", "customer123");
     }
 
     @Test
     void reportsValidationErrors() throws Exception {
         mockMvc.perform(post("/api/customers")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"username\":\"\"}"))
+                        .content("""
+                                {"username":"","password":"customer123"}
+                                """))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("Request validation failed"))
                 .andExpect(jsonPath("$.fieldErrors.username").value("Username is required"));
@@ -62,13 +66,24 @@ class CustomerControllerTests {
 
     @Test
     void reportsDuplicateUsernameAsConflict() throws Exception {
-        when(customerService.createCustomer("customer1"))
+        when(customerService.createCustomer("customer1", "customer123"))
                 .thenThrow(new DuplicateResourceException("Username is already in use"));
 
         mockMvc.perform(post("/api/customers")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"username\":\"customer1\"}"))
+                        .content("""
+                                {"username":"customer1","password":"customer123"}
+                                """))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message").value("Username is already in use"));
+    }
+
+    @Test
+    void requiresCustomerPassword() throws Exception {
+        mockMvc.perform(post("/api/customers")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"customer1\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fieldErrors.password").value("Password is required"));
     }
 }
