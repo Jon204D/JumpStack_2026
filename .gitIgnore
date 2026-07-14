@@ -14,3 +14,6 @@ ConsoleBankApp/.settings/
 
 # Logs
 *.log
+
+# VS Code settings
+.vscode/
