@@ -1,0 +1,19 @@
+# Maven
+/target/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Eclipse / IDE metadata
+.classpath
+.project
+.settings/
+.metadata/
+
+# Existing local build outputs
+/bin/
+
+# OS files
+.DS_Store
