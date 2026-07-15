@@ -1,19 +1,25 @@
-# Compiled Java output
+# Compiled Java output / Maven
 *.class
-ConsoleBankApp/bin/
-ConsoleBankApp/out/
-ConsoleBankApp/target/
+/bin/
+/out/
+/target/
 
 # Eclipse-generated project settings
-ConsoleBankApp/.classpath
-ConsoleBankApp/.project
-ConsoleBankApp/.settings/
+.classpath
+.project
+.settings/
+.metadata/
 
-# macOS
-.DS_Store
+# Environment and secrets
+.env
+.env.*
+!.env.example
 
-# Logs
+#Logs
 *.log
+
+# OS files
+.DS_Store
 
 # VS Code settings
 .vscode/
