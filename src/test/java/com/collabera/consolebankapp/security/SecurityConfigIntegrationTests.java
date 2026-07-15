@@ -43,6 +43,12 @@ class SecurityConfigIntegrationTests {
     }
 
     @Test
+    void requiresAuthenticationForCurrentUserEndpoint() throws Exception {
+        mockMvc.perform(get("/api/auth/me"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
     @WithMockUser(username = "customer1", roles = "CUSTOMER")
     void forbidsCustomerFromAdminOnlyEndpoint() throws Exception {
         mockMvc.perform(get("/api/customers"))
