@@ -8,7 +8,7 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotNull;
 
-public record CreateAccountRequest(
+public record InitialAccountRequest(
         @NotNull(message = "Account type is required")
         AccountType type,
 

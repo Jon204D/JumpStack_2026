@@ -9,7 +9,6 @@ import java.util.Locale;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.collabera.consolebankapp.exception.DuplicateResourceException;
 import com.collabera.consolebankapp.exception.InsufficientFundsException;
 import com.collabera.consolebankapp.exception.ResourceNotFoundException;
 import com.collabera.consolebankapp.model.Account;
@@ -29,19 +28,21 @@ public class AccountService {
     private final AccountRepository accountRepository;
     private final CustomerRepository customerRepository;
     private final BankTransactionRepository transactionRepository;
+    private final AccountNumberGenerator accountNumberGenerator;
 
     public AccountService(AccountRepository accountRepository,
             CustomerRepository customerRepository,
-            BankTransactionRepository transactionRepository) {
+            BankTransactionRepository transactionRepository,
+            AccountNumberGenerator accountNumberGenerator) {
         this.accountRepository = accountRepository;
         this.customerRepository = customerRepository;
         this.transactionRepository = transactionRepository;
+        this.accountNumberGenerator = accountNumberGenerator;
     }
 
-    public Account createAccount(String customerId, String accountNumber,
-            AccountType type, BigDecimal startingBalance) {
+    public Account createAccount(String customerId, AccountType type,
+            BigDecimal startingBalance) {
         String cleanCustomerId = requireText(customerId, "Customer id");
-        String cleanAccountNumber = normalizeAccountNumber(accountNumber);
         BigDecimal cleanBalance = requireNonNegativeMoney(startingBalance, "Starting balance");
 
         if (type == null) {
@@ -50,12 +51,10 @@ public class AccountService {
         if (!customerRepository.existsById(cleanCustomerId)) {
             throw new ResourceNotFoundException("Customer was not found");
         }
-        if (accountRepository.existsByAccountNumberIgnoreCase(cleanAccountNumber)) {
-            throw new DuplicateResourceException("Account number is already in use");
-        }
+        String accountNumber = accountNumberGenerator.generate(type);
 
         Account account = new Account(
-                cleanAccountNumber,
+                accountNumber,
                 cleanCustomerId,
                 type,
                 cleanBalance,

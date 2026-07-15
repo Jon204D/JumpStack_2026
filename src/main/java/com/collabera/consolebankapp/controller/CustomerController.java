@@ -15,9 +15,11 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.collabera.consolebankapp.dto.AccountResponse;
 import com.collabera.consolebankapp.dto.CreateAccountRequest;
-import com.collabera.consolebankapp.dto.CreateCustomerRequest;
 import com.collabera.consolebankapp.dto.CustomerResponse;
+import com.collabera.consolebankapp.dto.CustomerOnboardingResponse;
+import com.collabera.consolebankapp.dto.OnboardCustomerRequest;
 import com.collabera.consolebankapp.service.AccountService;
+import com.collabera.consolebankapp.service.CustomerOnboardingService;
 import com.collabera.consolebankapp.service.CustomerService;
 import com.collabera.consolebankapp.security.BankAuthorizationService;
 
@@ -29,22 +31,29 @@ public class CustomerController {
 
     private final CustomerService customerService;
     private final AccountService accountService;
+    private final CustomerOnboardingService onboardingService;
     private final BankAuthorizationService authorizationService;
 
     public CustomerController(
             CustomerService customerService,
             AccountService accountService,
+            CustomerOnboardingService onboardingService,
             BankAuthorizationService authorizationService) {
         this.customerService = customerService;
         this.accountService = accountService;
+        this.onboardingService = onboardingService;
         this.authorizationService = authorizationService;
     }
 
     @PostMapping
-    public ResponseEntity<CustomerResponse> createCustomer(
-            @Valid @RequestBody CreateCustomerRequest request) {
-        CustomerResponse response = CustomerResponse.from(
-                customerService.createCustomer(request.username(), request.password()));
+    public ResponseEntity<CustomerOnboardingResponse> createCustomer(
+            @Valid @RequestBody OnboardCustomerRequest request) {
+        CustomerOnboardingResponse response = CustomerOnboardingResponse.from(
+                onboardingService.onboard(
+                        request.username(),
+                        request.password(),
+                        request.totalStartingBalance(),
+                        request.accounts()));
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -69,7 +78,6 @@ public class CustomerController {
             @Valid @RequestBody CreateAccountRequest request) {
         AccountResponse response = AccountResponse.from(accountService.createAccount(
                 customerId,
-                request.accountNumber(),
                 request.type(),
                 request.startingBalance()));
         return ResponseEntity.status(HttpStatus.CREATED).body(response);

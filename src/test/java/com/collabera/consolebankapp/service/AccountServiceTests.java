@@ -39,28 +39,34 @@ class AccountServiceTests {
     @Mock
     private BankTransactionRepository transactionRepository;
 
+    @Mock
+    private AccountNumberGenerator accountNumberGenerator;
+
     private AccountService accountService;
 
     @BeforeEach
     void setUp() {
         accountService = new AccountService(
-                accountRepository, customerRepository, transactionRepository);
+                accountRepository,
+                customerRepository,
+                transactionRepository,
+                accountNumberGenerator);
     }
 
     @Test
     void createsSavingsAccountForExistingCustomer() {
         when(customerRepository.existsById("customer-1")).thenReturn(true);
-        when(accountRepository.existsByAccountNumberIgnoreCase("SAV001")).thenReturn(false);
+        when(accountNumberGenerator.generate(AccountType.SAVINGS))
+                .thenReturn("SAV-1234567");
         when(accountRepository.save(any(Account.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         Account account = accountService.createAccount(
                 "customer-1",
-                "sav001",
                 AccountType.SAVINGS,
                 new BigDecimal("500"));
 
-        assertEquals("SAV001", account.getAccountNumber());
+        assertEquals("SAV-1234567", account.getAccountNumber());
         assertEquals(AccountType.SAVINGS, account.getType());
         assertEquals(new BigDecimal("500.00"), account.getBalance());
         assertEquals(new BigDecimal("0.0150"), account.getInterestRate());
