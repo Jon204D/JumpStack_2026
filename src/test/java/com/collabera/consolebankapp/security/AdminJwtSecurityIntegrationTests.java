@@ -1,10 +1,13 @@
 package com.collabera.consolebankapp.security;
 
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.Base64;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -18,9 +21,12 @@ import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.security.oauth2.jwt.JwsHeader;
 import org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
+
+import com.collabera.consolebankapp.service.CustomerService;
 
 @SpringBootTest(properties = {
         "spring.mongodb.uri=mongodb://localhost:27017/console_bank_test",
@@ -37,6 +43,9 @@ class AdminJwtSecurityIntegrationTests {
 
     @Autowired
     private JwtEncoder jwtEncoder;
+
+    @MockitoBean
+    private CustomerService customerService;
 
     private MockMvc mockMvc;
 
@@ -68,6 +77,27 @@ class AdminJwtSecurityIntegrationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("Admin access granted"))
                 .andExpect(jsonPath("$.username").value("admin"));
+    }
+
+    @Test
+    void allowsAdminBearerTokenToListCustomers() throws Exception {
+        when(customerService.getAllCustomers()).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/customers")
+                        .header(HttpHeaders.AUTHORIZATION,
+                                "Bearer " + token("ADMIN", Instant.now().plusSeconds(300))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray());
+    }
+
+    @Test
+    void rejectsBasicAuthenticationForProtectedApiEndpoints() throws Exception {
+        String credentials = Base64.getEncoder().encodeToString(
+                "admin:admin-password".getBytes(StandardCharsets.UTF_8));
+
+        mockMvc.perform(get("/api/customers")
+                        .header(HttpHeaders.AUTHORIZATION, "Basic " + credentials))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
