@@ -2,6 +2,7 @@ package com.collabera.consolebankapp.security;
 
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -15,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
@@ -27,6 +29,9 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
 import com.collabera.consolebankapp.service.CustomerService;
+import com.collabera.consolebankapp.model.Role;
+import com.collabera.consolebankapp.model.UserCredential;
+import com.collabera.consolebankapp.service.AdminService;
 
 @SpringBootTest(properties = {
         "spring.mongodb.uri=mongodb://localhost:27017/console_bank_test",
@@ -46,6 +51,9 @@ class AdminJwtSecurityIntegrationTests {
 
     @MockitoBean
     private CustomerService customerService;
+
+    @MockitoBean
+    private AdminService adminService;
 
     private MockMvc mockMvc;
 
@@ -88,6 +96,43 @@ class AdminJwtSecurityIntegrationTests {
                                 "Bearer " + token("ADMIN", Instant.now().plusSeconds(300))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray());
+    }
+
+    @Test
+    void allowsAdminBearerTokenToCreateAnotherAdmin() throws Exception {
+        when(adminService.createAdmin("admin2", "securePassword123"))
+                .thenReturn(new UserCredential(
+                        "admin2",
+                        "bcrypt-hash",
+                        Role.ADMIN,
+                        null));
+
+        mockMvc.perform(post("/api/admins")
+                        .header(HttpHeaders.AUTHORIZATION,
+                                "Bearer " + token("ADMIN", Instant.now().plusSeconds(300)))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "username":"admin2",
+                                  "password":"securePassword123"
+                                }
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.username").value("admin2"))
+                .andExpect(jsonPath("$.role").value("ADMIN"));
+    }
+
+    @Test
+    void requiresBearerTokenToCreateAdmin() throws Exception {
+        mockMvc.perform(post("/api/admins")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "username":"admin2",
+                                  "password":"securePassword123"
+                                }
+                                """))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test

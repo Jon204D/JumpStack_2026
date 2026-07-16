@@ -2,6 +2,7 @@ package com.collabera.consolebankapp.security;
 
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -14,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
@@ -116,6 +118,21 @@ class CustomerJwtSecurityIntegrationTests {
                                 "Bearer " + customerToken(Instant.now().plusSeconds(300))))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.error").value("Access Forbidden"));
+    }
+
+    @Test
+    void forbidsCustomerFromCreatingAdmin() throws Exception {
+        mockMvc.perform(post("/api/admins")
+                        .header(HttpHeaders.AUTHORIZATION,
+                                "Bearer " + customerToken(Instant.now().plusSeconds(300)))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "username":"admin2",
+                                  "password":"securePassword123"
+                                }
+                                """))
+                .andExpect(status().isForbidden());
     }
 
     @Test
