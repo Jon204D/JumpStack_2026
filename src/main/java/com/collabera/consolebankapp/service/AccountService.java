@@ -152,6 +152,10 @@ public class AccountService {
                         cleanAccountNumber);
     }
 
+    public List<BankTransaction> getAllTransactionHistory() {
+        return transactionRepository.findAllByOrderByCreatedAtDesc();
+    }
+
     @Transactional
     public void deleteAccount(String accountNumber) {
         Account account = findAccount(normalizeAccountNumber(accountNumber));

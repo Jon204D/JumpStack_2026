@@ -64,6 +64,13 @@ class SecurityConfigIntegrationTests {
 
     @Test
     @WithMockUser(username = "customer1", roles = "CUSTOMER")
+    void forbidsCustomerFromBankWideTransactionAudit() throws Exception {
+        mockMvc.perform(get("/api/transactions"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(username = "customer1", roles = "CUSTOMER")
     void forbidsCustomerFromDeletingResources() throws Exception {
         mockMvc.perform(delete("/api/accounts/CHK001"))
                 .andExpect(status().isForbidden());

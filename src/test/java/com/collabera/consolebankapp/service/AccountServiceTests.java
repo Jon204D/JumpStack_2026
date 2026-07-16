@@ -195,6 +195,23 @@ class AccountServiceTests {
     }
 
     @Test
+    void listsAllTransactionHistoryForAdminNewestFirst() {
+        BankTransaction transaction = new BankTransaction(
+                TransactionType.TRANSFER,
+                "CHK001",
+                "SAV001",
+                new BigDecimal("30.00"),
+                java.time.Instant.parse("2026-07-14T12:00:00Z"));
+        when(transactionRepository.findAllByOrderByCreatedAtDesc())
+                .thenReturn(List.of(transaction));
+
+        List<BankTransaction> history = accountService.getAllTransactionHistory();
+
+        assertEquals(1, history.size());
+        assertEquals(TransactionType.TRANSFER, history.getFirst().getType());
+    }
+
+    @Test
     void deletesExistingAccount() {
         Account account = checkingAccount("CHK001", "100.00");
         when(accountRepository.findByAccountNumberIgnoreCase("CHK001"))

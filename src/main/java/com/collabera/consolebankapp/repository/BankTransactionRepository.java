@@ -9,6 +9,8 @@ import com.collabera.consolebankapp.model.BankTransaction;
 public interface BankTransactionRepository
         extends MongoRepository<BankTransaction, String> {
 
+    List<BankTransaction> findAllByOrderByCreatedAtDesc();
+
     List<BankTransaction>
             findBySourceAccountNumberIgnoreCaseOrDestinationAccountNumberIgnoreCaseOrderByCreatedAtDesc(
                     String sourceAccountNumber,
