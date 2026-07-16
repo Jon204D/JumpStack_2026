@@ -17,12 +17,19 @@ import com.collabera.consolebankapp.dto.ApiError;
 import com.collabera.consolebankapp.exception.DuplicateResourceException;
 import com.collabera.consolebankapp.exception.ForbiddenOperationException;
 import com.collabera.consolebankapp.exception.InsufficientFundsException;
+import com.collabera.consolebankapp.exception.InvalidCredentialsException;
 import com.collabera.consolebankapp.exception.ResourceNotFoundException;
 
 import jakarta.servlet.http.HttpServletRequest;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ResponseEntity<ApiError> handleInvalidCredentials(
+            InvalidCredentialsException exception, HttpServletRequest request) {
+        return response(HttpStatus.UNAUTHORIZED, exception.getMessage(), request, Map.of());
+    }
 
     @ExceptionHandler(ForbiddenOperationException.class)
     public ResponseEntity<ApiError> handleForbidden(
