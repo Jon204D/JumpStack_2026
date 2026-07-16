@@ -93,6 +93,37 @@ class AuthControllerTests {
     }
 
     @Test
+    void returnsCustomerJwtWithLinkedCustomerId() throws Exception {
+        UserCredential credential = new UserCredential(
+                "customer1", "password-hash", Role.CUSTOMER, "customer-1");
+        UsernamePasswordAuthenticationToken authentication =
+                UsernamePasswordAuthenticationToken.authenticated(
+                        "customer1", null,
+                        List.of(new SimpleGrantedAuthority("ROLE_CUSTOMER")));
+        JwtAuthenticationResponse token = new JwtAuthenticationResponse(
+                "signed.customer.jwt", "Bearer", 900,
+                "customer1", Role.CUSTOMER, "customer-1");
+
+        when(authenticationManager.authenticate(any()))
+                .thenReturn(authentication);
+        when(userCredentialRepository.findByUsernameIgnoreCase("customer1"))
+                .thenReturn(Optional.of(credential));
+        when(jwtTokenService.issueToken(authentication, credential))
+                .thenReturn(token);
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"customer1\",\"password\":\"customer123\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accessToken").value("signed.customer.jwt"))
+                .andExpect(jsonPath("$.tokenType").value("Bearer"))
+                .andExpect(jsonPath("$.expiresIn").value(900))
+                .andExpect(jsonPath("$.username").value("customer1"))
+                .andExpect(jsonPath("$.role").value("CUSTOMER"))
+                .andExpect(jsonPath("$.customerId").value("customer-1"));
+    }
+
+    @Test
     void rejectsInvalidLoginCredentials() throws Exception {
         when(authenticationManager.authenticate(any()))
                 .thenThrow(new BadCredentialsException("bad credentials"));
