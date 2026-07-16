@@ -2,6 +2,7 @@ package com.collabera.consolebankapp.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
@@ -126,5 +127,92 @@ class CustomerServiceTests {
         verify(accountRepository, never()).deleteByCustomerId(any());
         verify(userCredentialRepository, never()).deleteByCustomerId(any());
         verify(customerRepository, never()).delete(any(Customer.class));
+    }
+
+    @Test
+    void updatesCustomerUsernameAndPasswordTogether() {
+        Customer customer = new Customer("customer1");
+        UserCredential credential = new UserCredential(
+                "customer1",
+                passwordEncoder.encode("oldPassword"),
+                Role.CUSTOMER,
+                "customer-1");
+        when(customerRepository.findById("customer-1")).thenReturn(Optional.of(customer));
+        when(userCredentialRepository.findByCustomerId("customer-1"))
+                .thenReturn(Optional.of(credential));
+
+        Customer updated = customerService.updateCustomer(
+                "customer-1",
+                "  customer2  ",
+                "newPassword123");
+
+        assertEquals("customer2", updated.getUsername());
+        assertEquals("customer2", credential.getUsername());
+        assertTrue(passwordEncoder.matches("newPassword123", credential.getPasswordHash()));
+        verify(customerRepository).save(customer);
+        verify(userCredentialRepository).save(credential);
+    }
+
+    @Test
+    void updatesPasswordWithoutChangingUsername() {
+        Customer customer = new Customer("customer1");
+        UserCredential credential = new UserCredential(
+                "customer1",
+                passwordEncoder.encode("oldPassword"),
+                Role.CUSTOMER,
+                "customer-1");
+        when(customerRepository.findById("customer-1")).thenReturn(Optional.of(customer));
+        when(userCredentialRepository.findByCustomerId("customer-1"))
+                .thenReturn(Optional.of(credential));
+
+        Customer updated = customerService.updateCustomer(
+                "customer-1",
+                null,
+                "newPassword123");
+
+        assertEquals("customer1", updated.getUsername());
+        assertTrue(passwordEncoder.matches("newPassword123", credential.getPasswordHash()));
+        verify(customerRepository, never()).save(any(Customer.class));
+        verify(userCredentialRepository).save(credential);
+    }
+
+    @Test
+    void rejectsDuplicateUsernameDuringUpdate() {
+        Customer customer = new Customer("customer1");
+        UserCredential credential = new UserCredential(
+                "customer1",
+                "hash",
+                Role.CUSTOMER,
+                "customer-1");
+        when(customerRepository.findById("customer-1")).thenReturn(Optional.of(customer));
+        when(userCredentialRepository.findByCustomerId("customer-1"))
+                .thenReturn(Optional.of(credential));
+        when(customerRepository.existsByUsernameIgnoreCase("customer2")).thenReturn(true);
+
+        assertThrows(DuplicateResourceException.class,
+                () -> customerService.updateCustomer(
+                        "customer-1",
+                        "customer2",
+                        null));
+
+        verify(customerRepository, never()).save(any(Customer.class));
+        verify(userCredentialRepository, never()).save(any(UserCredential.class));
+    }
+
+    @Test
+    void rejectsUpdateWhenCustomerCredentialsAreMissing() {
+        Customer customer = new Customer("customer1");
+        when(customerRepository.findById("customer-1")).thenReturn(Optional.of(customer));
+        when(userCredentialRepository.findByCustomerId("customer-1"))
+                .thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class,
+                () -> customerService.updateCustomer(
+                        "customer-1",
+                        "customer2",
+                        null));
+
+        verify(customerRepository, never()).save(any(Customer.class));
+        verify(userCredentialRepository, never()).save(any(UserCredential.class));
     }
 }

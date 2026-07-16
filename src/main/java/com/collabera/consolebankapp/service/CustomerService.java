@@ -64,6 +64,40 @@ public class CustomerService {
     }
 
     @Transactional
+    public Customer updateCustomer(String customerId, String username, String password) {
+        String cleanCustomerId = requireText(customerId, "Customer id");
+        if (username == null && password == null) {
+            throw new IllegalArgumentException("A username or password update is required");
+        }
+
+        Customer customer = getCustomer(cleanCustomerId);
+        UserCredential credential = userCredentialRepository.findByCustomerId(cleanCustomerId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Customer credentials were not found"));
+
+        if (username != null) {
+            String cleanUsername = requireText(username, "Username");
+            if (!cleanUsername.equalsIgnoreCase(customer.getUsername())) {
+                if (customerRepository.existsByUsernameIgnoreCase(cleanUsername)
+                        || userCredentialRepository.existsByUsernameIgnoreCase(cleanUsername)) {
+                    throw new DuplicateResourceException("Username is already in use");
+                }
+            }
+            customer.setUsername(cleanUsername);
+            credential.setUsername(cleanUsername);
+            customerRepository.save(customer);
+        }
+
+        if (password != null) {
+            String cleanPassword = requireText(password, "Password");
+            credential.setPasswordHash(passwordEncoder.encode(cleanPassword));
+        }
+
+        userCredentialRepository.save(credential);
+        return customer;
+    }
+
+    @Transactional
     public void deleteCustomer(String customerId) {
         String cleanCustomerId = requireText(customerId, "Customer id");
         Customer customer = getCustomer(cleanCustomerId);

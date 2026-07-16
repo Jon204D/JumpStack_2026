@@ -10,6 +10,8 @@ public interface UserCredentialRepository extends MongoRepository<UserCredential
 
     Optional<UserCredential> findByUsernameIgnoreCase(String username);
 
+    Optional<UserCredential> findByCustomerId(String customerId);
+
     boolean existsByUsernameIgnoreCase(String username);
 
     long deleteByCustomerId(String customerId);

@@ -5,6 +5,7 @@ import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.doThrow;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -160,5 +161,53 @@ class CustomerControllerTests {
         mockMvc.perform(delete("/api/customers/missing"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message").value("Customer was not found"));
+    }
+
+    @Test
+    void updatesCustomerCredentials() throws Exception {
+        Customer customer = new Customer("customer2");
+        when(customerService.updateCustomer(
+                "customer-1",
+                "customer2",
+                "newPassword123"))
+                .thenReturn(customer);
+
+        mockMvc.perform(patch("/api/customers/customer-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "username":"customer2",
+                                  "password":"newPassword123"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username").value("customer2"));
+
+        verify(customerService).updateCustomer(
+                "customer-1",
+                "customer2",
+                "newPassword123");
+    }
+
+    @Test
+    void rejectsShortReplacementPassword() throws Exception {
+        mockMvc.perform(patch("/api/customers/customer-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"password\":\"short\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fieldErrors.password")
+                        .value("Password must be between 8 and 72 characters"));
+    }
+
+    @Test
+    void reportsDuplicateUsernameDuringUpdate() throws Exception {
+        when(customerService.updateCustomer("customer-1", "customer2", null))
+                .thenThrow(new DuplicateResourceException("Username is already in use"));
+
+        mockMvc.perform(patch("/api/customers/customer-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"customer2\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("Username is already in use"));
     }
 }

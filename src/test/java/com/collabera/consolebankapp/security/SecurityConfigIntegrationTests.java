@@ -3,6 +3,7 @@ package com.collabera.consolebankapp.security;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -73,6 +74,15 @@ class SecurityConfigIntegrationTests {
     @WithMockUser(username = "customer1", roles = "CUSTOMER")
     void forbidsCustomerFromDeletingResources() throws Exception {
         mockMvc.perform(delete("/api/accounts/CHK001"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(username = "customer1", roles = "CUSTOMER")
+    void forbidsCustomerFromUpdatingCustomerCredentials() throws Exception {
+        mockMvc.perform(patch("/api/customers/customer-1")
+                        .contentType("application/json")
+                        .content("{\"username\":\"customer2\"}"))
                 .andExpect(status().isForbidden());
     }
 }

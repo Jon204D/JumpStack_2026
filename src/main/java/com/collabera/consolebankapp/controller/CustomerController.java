@@ -8,6 +8,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -18,6 +19,7 @@ import com.collabera.consolebankapp.dto.CreateAccountRequest;
 import com.collabera.consolebankapp.dto.CustomerResponse;
 import com.collabera.consolebankapp.dto.CustomerOnboardingResponse;
 import com.collabera.consolebankapp.dto.OnboardCustomerRequest;
+import com.collabera.consolebankapp.dto.UpdateCustomerRequest;
 import com.collabera.consolebankapp.service.AccountService;
 import com.collabera.consolebankapp.service.CustomerOnboardingService;
 import com.collabera.consolebankapp.service.CustomerService;
@@ -70,6 +72,16 @@ public class CustomerController {
             Authentication authentication) {
         authorizationService.requireCustomerAccess(authentication, customerId);
         return CustomerResponse.from(customerService.getCustomer(customerId));
+    }
+
+    @PatchMapping("/{customerId}")
+    public CustomerResponse updateCustomer(
+            @PathVariable String customerId,
+            @Valid @RequestBody UpdateCustomerRequest request) {
+        return CustomerResponse.from(customerService.updateCustomer(
+                customerId,
+                request.username(),
+                request.password()));
     }
 
     @PostMapping("/{customerId}/accounts")
