@@ -13,6 +13,6 @@ resource "aws_instance" "app" {
   EOF
 
   tags = {
-    Name = "${var.student_name}-ec2"
+    Name = "${var.student_name}-java-backend-ec2"
   }
 }

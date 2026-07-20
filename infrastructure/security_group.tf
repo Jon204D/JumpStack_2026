@@ -30,6 +30,6 @@ resource "aws_security_group" "ec2" {
   }
 
   tags = {
-    Name = "${var.student_name}-sg"
+    Name = "${var.student_name}-java-backend-sg"
   }
 }
